@@ -25,7 +25,7 @@ GET /prices/:symbol
 - It fetches the latest price from CoinGecko
 - Stores the price in:
   - Database (persistent storage)
-  - Cache (for fast access)
+  - Cache (Redis for fast access)
 
 When API is called:
 1. Try cache (Redis)
@@ -41,10 +41,42 @@ When API is called:
 - Redis (caching + background jobs)
 - Sidekiq (job processing)
 - RSpec (testing)
+- Docker & Docker Compose
 
 ---
 
-## Setup
+## Setup (Using Docker) 🚀
+
+### Build containers
+
+docker compose build
+
+### Start services
+
+docker compose up
+
+This will start:
+- Rails API (web)
+- PostgreSQL (db)
+- Redis
+- Sidekiq
+
+---
+
+### Setup database (first time only)
+
+docker compose exec web rails db:create  
+docker compose exec web rails db:migrate  
+
+---
+
+### API will be available at:
+
+http://localhost:3000
+
+---
+
+## Setup (Without Docker)
 
 ### Install dependencies
 
@@ -84,6 +116,7 @@ GET /prices/bitcoin
 ### Response
 
 From cache:
+
 {
   "symbol": "bitcoin",
   "price": 64000.25,
@@ -91,6 +124,7 @@ From cache:
 }
 
 Fallback to DB:
+
 {
   "symbol": "bitcoin",
   "price": 64000.25,
@@ -114,7 +148,7 @@ Fallback to DB:
 - Symbol is expected in lowercase (e.g. bitcoin)
 - Cache expiry is short (around 2 minutes)
 - Background job keeps data updated
-
+- Redis is used for caching and Sidekiq jobs
 
 ---
 
@@ -123,3 +157,4 @@ Fallback to DB:
 - DB → source of truth  
 - Cache → fast reads  
 - Background job → keeps data updated  
+- Docker → easy setup and consistent environment
