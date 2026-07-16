@@ -1,51 +1,60 @@
-# Crypto Price API
+# 🚀 Crypto Price API
 
 This is a small Rails API that returns cryptocurrency prices for a given symbol.
 
-The system periodically fetches prices from an external API and stores them locally.  
-The API serves cached data for fast responses and falls back to stored data if needed.
+The system periodically fetches prices from an external API and stores them in cache.  
+The API serves cached data and continues to return the last known value even if the external API fails.
 
 ---
 
-## Problem Statement
+## 📌 Problem Statement
 
 Build an API:
 
 GET /prices/:symbol
 
-- Returns the latest price for a given crypto symbol
-- Uses cached data when available
-- Falls back to last stored value if external API fails
+- Returns the latest price for a given crypto symbol  
+- Uses cached data for fast responses  
+- If external API fails → continues serving last known cached value  
 
 ---
 
-## Approach
+## 🧠 Approach
 
-- A background job runs every minute
-- It fetches the latest price from CoinGecko
+- A background job runs every minute  
+- It fetches the latest price from CoinGecko  
 - Stores the price in:
-  - Database (persistent storage)
-  - Cache (Redis for fast access)
+  - Redis cache (single source for reads)
 
-When API is called:
-1. Try cache (Redis)
-2. If not found → read from DB
-3. If not found → return error
+### Request Flow
 
----
-
-## Tech Stack
-
-- Ruby on Rails (API mode)
-- PostgreSQL
-- Redis (caching + background jobs)
-- Sidekiq (job processing)
-- RSpec (testing)
-- Docker & Docker Compose
+1. Read from cache (Redis)  
+2. If present → return value  
+3. If not present → return error  
 
 ---
 
-## Setup (Using Docker) 🚀
+## ⚡ Key Design Decision
+
+No database fallback is used
+
+- Redis acts as the **single source of truth for current price**
+- Fallback works by **not overwriting cache on API failure**
+- Last successful value remains available
+
+---
+
+## 🧰 Tech Stack
+
+- Ruby on Rails (API mode)  
+- Redis (caching + background jobs)  
+- Sidekiq (job processing)  
+- RSpec (testing)  
+- Docker Compose  
+
+---
+
+## 🐳 Setup (Using Docker)
 
 ### Build containers
 
@@ -56,36 +65,18 @@ docker compose build
 docker compose up
 
 This will start:
-- Rails API (web)
-- PostgreSQL (db)
-- Redis
-- Sidekiq
+
+- Rails API (web)  
+- Redis  
+- Sidekiq  
 
 ---
 
-### Setup database (first time only)
-
-docker compose exec web rails db:create  
-docker compose exec web rails db:migrate  
-
----
-
-### API will be available at:
-
-http://localhost:3000
-
----
-
-## Setup (Without Docker)
+## 🔧 Setup (Without Docker)
 
 ### Install dependencies
 
 bundle install
-
-### Setup database
-
-rails db:create  
-rails db:migrate  
 
 ### Start Redis
 
@@ -95,13 +86,13 @@ redis-server
 
 bundle exec sidekiq
 
-### Start server
+### Start Rails server
 
 rails s
 
 ---
 
-## API Usage
+## 🌐 API Usage
 
 ### Request
 
@@ -109,52 +100,15 @@ GET /prices/:symbol
 
 Example:
 
-GET /prices/bitcoin
+GET /prices/BTC
 
 ---
 
-### Response
+### ✅ Response (from cache)
 
-From cache:
-
+```json
 {
-  "symbol": "bitcoin",
+  "symbol": "BTC",
   "price": 64000.25,
   "source": "cache"
 }
-
-Fallback to DB:
-
-{
-  "symbol": "bitcoin",
-  "price": 64000.25,
-  "source": "db"
-}
-
----
-
-## Failure Handling
-
-- If external API fails:
-  - System does not crash
-  - Last stored price is returned
-- If no data exists:
-  - Returns error response
-
----
-
-## Notes / Assumptions
-
-- Symbol is expected in lowercase (e.g. bitcoin)
-- Cache expiry is short (around 2 minutes)
-- Background job keeps data updated
-- Redis is used for caching and Sidekiq jobs
-
----
-
-## Summary
-
-- DB → source of truth  
-- Cache → fast reads  
-- Background job → keeps data updated  
-- Docker → easy setup and consistent environment
